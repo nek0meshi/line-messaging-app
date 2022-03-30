@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: environment/server/dev/Dockerfile
+    ports:
+      - 8000:80
+    volumes:
+      - ./server:/go/src/server:cached
+    tty: true
+    working_dir: /go/src/server
