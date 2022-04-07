@@ -15,4 +15,6 @@ WORKDIR /root/
 
 COPY --from=builder /go/src/nek0meshi/line-messaging-app/app ./
 
+EXPOSE 80
+
 CMD ["./app"]

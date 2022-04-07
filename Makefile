@@ -16,21 +16,15 @@ sh:
 
 .PHONY: build-prod
 build-prod:
-	docker build -f environment/server/Dockerfile -t ${IMAGE_NAME} .
+	docker build --platform amd64 -f environment/server/Dockerfile -t ${IMAGE_NAME} .
 
 .PHONY: run-prod
 run-prod:
-	docker run --rm ${IMAGE_NAME}
-
-.PHONY: aws-login
-aws-login:
-	aws ecr get-login-password | \
-		docker login --username AWS --password-stdin ${ECR_URL}
+	docker run --rm -p 9000:80 ${IMAGE_NAME}
 
 IMAGE_VERSION=latest
 
-# cf. https://docs.aws.amazon.com/ja_jp/AmazonECR/latest/userguide/repository-policy-examples.html
+# cf. https://lightsail.aws.amazon.com/ls/docs/ja_jp/articles/amazon-lightsail-pushing-container-images
 .PHONY: aws-push-image
-aws-push-image:
-	docker tag ${IMAGE_NAME}:${IMAGE_VERSION} ${ECR_URL}/${IMAGE_NAME}:${IMAGE_VERSION}
-	docker push ${ECR_URL}/${IMAGE_NAME}:${IMAGE_VERSION}
+aws-push-image: build-prod
+	aws lightsail push-container-image --service-name line-messaging-app --label webhook --image ${IMAGE_NAME}:${IMAGE_VERSION}
