@@ -13,6 +13,7 @@ FROM alpine:latest
 
 WORKDIR /root/
 
+COPY server/.env ./
 COPY --from=builder /go/src/nek0meshi/line-messaging-app/app ./
 
 EXPOSE 80
