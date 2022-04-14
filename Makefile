@@ -22,6 +22,10 @@ build-prod:
 run-prod:
 	docker run --rm -p 9000:80 ${IMAGE_NAME}
 
+.PHONY: fmt
+fmt:
+	docker compose run --rm server go fmt
+
 IMAGE_VERSION=latest
 
 # cf. https://lightsail.aws.amazon.com/ls/docs/ja_jp/articles/amazon-lightsail-pushing-container-images
