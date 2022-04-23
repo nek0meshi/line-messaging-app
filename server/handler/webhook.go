@@ -30,7 +30,7 @@ type WebhookEvent struct {
 	Events []Event `json:"events"`
 }
 
-func handleWebhook(c *gin.Context) {
+func handleWebhook(c *gin.Context) (int, string, gin.H) {
 	// check signature
 	// https://developers.line.biz/ja/reference/messaging-api/#signature-validation
 	defer c.Request.Body.Close()
@@ -47,10 +47,7 @@ func handleWebhook(c *gin.Context) {
 	// body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Print("failed to read body")
-		c.JSON(400, gin.H{
-			"message": "failed to read body",
-		})
-		return
+		return 400, "failed to read body", nil
 	}
 	log.Print("signature: " + signature)
 	log.Print(body)
@@ -59,34 +56,25 @@ func handleWebhook(c *gin.Context) {
 	accessToken := os.Getenv("ACCESS_TOKEN")
 	channelSecret := os.Getenv("CHANNEL_SECRET")
 	if accessToken == "" || channelSecret == "" {
-		c.JSON(500, gin.H{
-			"message": "Internal Server Error",
-		})
+		return 500, "Internal Server Error", nil
 	}
 	err = validateSignature(channelSecret, signature, body)
 
 	if err != nil {
 		log.Print(err.Error())
-		c.JSON(400, gin.H{
-			"message": err.Error(),
-		})
+		return 400, "invalid signature", nil
 	}
 
 	var event WebhookEvent
 	if err := c.ShouldBindJSON(&event); err != nil {
 		log.Print("failed to parse json ... " + err.Error())
-		c.JSON(400, gin.H{
-			"message": "failed to parse json",
-		})
-		return
+		return 400, "failed to parse json", nil
 	}
 
 	bot := createLineBot(channelSecret, accessToken)
 
 	if bot == nil {
-		c.JSON(500, gin.H{
-			"message": "Internal Server Error",
-		})
+		return 500, "Internal Server Error", nil
 	}
 
 	for _, event := range event.Events {
@@ -102,17 +90,14 @@ func handleWebhook(c *gin.Context) {
 			if err != nil {
 				log.Print("failed to reply message ... " + err.Error())
 
-				c.JSON(400, gin.H{
-					"message": "Failed to Reply",
-				})
+				return 400, "Failed to Reply", nil
 			}
 		} else {
 			log.Print("message type = " + event.Message.Type)
 		}
 	}
 
-	// response
-	c.JSON(200, gin.H{})
+	return 200, "", gin.H{}
 }
 
 func validateSignature(channelSecret string, signature string, body []byte) error {
