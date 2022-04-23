@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/line/line-bot-sdk-go/v7/linebot"
 )
 
 type Message struct {
@@ -93,13 +94,45 @@ func setupRouter() *gin.Engine {
 			return
 		}
 
+
+		channelSecret := os.Getenv("CHANNEL_SECRET")
+		if channelSecret == "" {
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
+		}
+
+		bot := createLineBot(channelSecret, accessToken)
+
+		if bot == nil {
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
+		}
+
 		for _, event := range event.Events {
+			log.Print("reply token = " + event.ReplyToken)
 			if event.Message.Type == "text" {
 				log.Print("message text = " + event.Message.Text)
+
+				// 届いたメッセージをそのまま返却する
+				replyMessage := linebot.NewTextMessage(event.Message.Text)
+
+				_, err = bot.ReplyMessage(event.ReplyToken, replyMessage).Do()
+
+				if err != nil {
+					log.Print("failed to reply message ... " + err.Error())
+
+					c.JSON(400, gin.H{
+						"message": "Failed to Reply",
+					})
+				}
 			} else {
 				log.Print("message type = " + event.Message.Type)
 			}
 		}
+
+
 
 		// response
 		c.JSON(200, gin.H{})
@@ -126,6 +159,18 @@ func validateSignature(channelSecret string, signature string, body []byte) erro
 	}
 
 	return nil
+}
+
+func createLineBot(channelSecret string, accessToken string) (*linebot.Client) {
+	bot, err := linebot.New(channelSecret, accessToken)
+
+	if err != nil {
+		log.Print("failed to create line bot ... " + err.Error())
+
+		return nil
+	}
+
+	return bot
 }
 
 func main() {
